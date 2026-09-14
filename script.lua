@@ -132,7 +132,7 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
             return workspace:FindFirstChild("Map")
                 and workspace.Map:FindFirstChild("GiveWins")
                 and workspace.Map.GiveWins:FindFirstChild("OneWin")
-                and workspace.Map.GiveWins.OneWin:FindFirstChild("Button9")
+                and workspace.Map.GiveWins.OneWin:FindFirstChild("Button15")
         end)
     end
 end)
