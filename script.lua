@@ -1,3 +1,69 @@
+if game.PlaceId ~= 122245938604556 then
+	warn("❌ Este script solo funciona en 1+ tongue escape(PlaceId: 122245938604556)")
+	return
+end
+
+-- ======================================================
+-- Anti-AFK Mejorado (siempre activo + sin cámara)
+-- ======================================================
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+local LocalPlayer = Players.LocalPlayer
+
+local MinInterval = 40
+local MaxInterval = 70
+
+local function DoAntiAFK()
+	pcall(function()
+		VirtualUser:CaptureController()
+		VirtualUser:ClickButton2(Vector2.new())
+	end)
+end
+
+LocalPlayer.Idled:Connect(function()
+	DoAntiAFK()
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(math.random(MinInterval, MaxInterval))
+		DoAntiAFK()
+	end
+end)
+
+print("✅ Anti-AFK activado permanentemente")
+
+-- ======================================================
+-- Anti-Kick + Protección extra (siempre activo)
+-- ======================================================
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+
+setreadonly(mt, false)
+
+mt.__namecall = newcclosure(function(self, ...)
+	local method = getnamecallmethod()
+	local args = {...}
+
+	if method == "Kick" and self == LocalPlayer then
+		return
+	end
+
+	-- Bloquea FireServer de remotes sospechosos de kick/ban
+	if method == "FireServer" then
+		local remoteName = tostring(self.Name):lower()
+		if remoteName:find("kick") or remoteName:find("ban") or remoteName:find("moderate") or remoteName:find("punish") then
+			return
+		end
+	end
+
+	return oldNamecall(self, ...)
+end)
+
+setreadonly(mt, true)
+
+print("✅ Anti-Kick completo cargado")
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
