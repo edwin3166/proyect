@@ -74,7 +74,7 @@ function FlyController:StartForcedFly(getTargetFunc)
         if not target then return end
 
         local targetPos = target:IsA("Model") and target:GetPivot().Position or target.Position
-        local goalPosition = targetPos + Vector3.new(0, 0.5, 0)
+        local goalPosition = targetPos + Vector3.new(0, 1.5, 0)
         
         local currentPos = self.humanoidRootPart.Position
         local toGoal = goalPosition - currentPos
@@ -127,7 +127,7 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
     flyController = FlyController.new(newChar)
     -- Si el toggle estaba activo, reiniciamos el fly forzado en el nuevo personaje
     if _G.AutoFlyActive then
-        task.wait()
+        task.wait(0.5)
         flyController:StartForcedFly(function()
             return workspace:FindFirstChild("Map")
                 and workspace.Map:FindFirstChild("GiveWins")
@@ -163,7 +163,7 @@ MainTab:Toggle({
                 return workspace:FindFirstChild("Map")
                     and workspace.Map:FindFirstChild("GiveWins")
                     and workspace.Map.GiveWins:FindFirstChild("OneWin")
-                    and workspace.Map.GiveWins.OneWin:FindFirstChild("Button9")
+                    and workspace.Map.GiveWins.OneWin:FindFirstChild("Button15")
             end)
             WindUI:Notify({Title = "Auto Farm", Content = "Modo Forzado Activado", Duration = 2})
         else
