@@ -127,7 +127,7 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
     flyController = FlyController.new(newChar)
     -- Si el toggle estaba activo, reiniciamos el fly forzado en el nuevo personaje
     if _G.AutoFlyActive then
-        task.wait(0.5)
+        task.wait()
         flyController:StartForcedFly(function()
             return workspace:FindFirstChild("Map")
                 and workspace.Map:FindFirstChild("GiveWins")
