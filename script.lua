@@ -74,7 +74,7 @@ function FlyController:StartForcedFly(getTargetFunc)
         if not target then return end
 
         local targetPos = target:IsA("Model") and target:GetPivot().Position or target.Position
-        local goalPosition = targetPos + Vector3.new(0, 1, 0)
+        local goalPosition = targetPos + Vector3.new(0, 0.5, 0)
         
         local currentPos = self.humanoidRootPart.Position
         local toGoal = goalPosition - currentPos
