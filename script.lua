@@ -66,17 +66,22 @@ print("✅ Anti-Kick completo cargado")
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Cargar WindUI
-local WINDUI_URL = "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
-local success, WindUI = pcall(function()
-    return loadstring(game:HttpGet(WINDUI_URL))()
-end)
+--[[ WindUI Example Adapted for EdwinDev ]]
+local cloneref = (cloneref or clonereference or function(instance) return instance end)
+local ReplicatedStorage = cloneref(game:GetService("ReplicatedStorage"))
+local HttpService = cloneref(game:GetService("HttpService"))
 
-if not success or not WindUI then
-    warn("Error: No se pudo cargar WindUI.")
-    return
+local WindUI
+do
+    local ok, result = pcall(function() return require("./src/Init") end)
+    if ok then
+        WindUI = result
+    else
+        WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+    end
 end
 
 --// FlyController Reforzado (EdwinDev Style + Forced Logic)
@@ -152,95 +157,173 @@ function FlyController:StartForcedFly(getTargetFunc)
 
         if distance > 0.5 then
             local direction = toGoal.Unit
-            -- Usar la velocidad global del slider
             local speed = _G.FlySpeed or 40
             local step = speed * dt
             
-            -- Si el paso es mayor que la distancia, simplemente nos ponemos en el objetivo
             local newPos = (step >= distance) and goalPosition or (currentPos + direction * step)
-
             local desiredCFrame = CFrame.new(newPos, newPos + direction)
-            -- Suavizado de cámara/rotación
             local smoothCFrame = lastValidCFrame:Lerp(desiredCFrame, math.clamp(dt * 10, 0, 1))
             
             self.humanoidRootPart.CFrame = smoothCFrame
             lastValidCFrame = smoothCFrame
         else
-            -- Si ya estamos en el objetivo, forzamos la posición para que no se mueva
             self.humanoidRootPart.CFrame = CFrame.new(goalPosition, goalPosition + self.humanoidRootPart.CFrame.LookVector)
             lastValidCFrame = self.humanoidRootPart.CFrame
         end
     end)
 end
 
---// Configuración de la Interfaz (EdwinDev Style)
+-- */ Window /* --
 local Window = WindUI:CreateWindow({
     Title = "1+ tongue escape",
-    Icon = "plane",
-    Author = "By EdwinDev",
-    Folder = "FlyConfigV4",
-    Theme = "Dark",
-    Size = UDim2.fromOffset(450, 350),
+    Author = "by EdwinDev",
+    Folder = "EdwinDevHub",
+    Icon = "solar:folder-2-bold-duotone",
+    NewElements = true,
+    HideSearchBar = false,
+    OpenButton = {
+        Title = "Open EdwinDev UI",
+        CornerRadius = UDim.new(1, 0),
+        StrokeThickness = 3,
+        Enabled = true,
+        Draggable = true,
+        OnlyMobile = false,
+        Scale = 0.5,
+        Color = ColorSequence.new(
+            Color3.fromHex("#30FF6A"),
+            Color3.fromHex("#e7ff2f")
+        ),
+    },
+    Topbar = {
+        Height = 44,
+        ButtonsType = "Mac",
+    },
 })
 
-local MainTab = Window:Tab({Title = "Main", Icon = "mouse-pointer-2"})
+-- */ Tags /* --
+do
+    Window:Tag({
+        Title = "v" .. WindUI.Version,
+        Icon = "github",
+        Color = Color3.fromHex("#1c1c1c"),
+        Border = true,
+    })
+end
 
--- Inicializar controlador
-local flyController = FlyController.new(LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
-
-LocalPlayer.CharacterAdded:Connect(function(newChar)
-    if flyController then flyController:Stop() end
-    flyController = FlyController.new(newChar)
-    -- Si el toggle estaba activo, reiniciamos el fly forzado en el nuevo personaje
-    if _G.AutoFlyActive then
-        task.wait(0.5)
-        flyController:StartForcedFly(function()
-            return workspace:FindFirstChild("Map")
-                and workspace.Map:FindFirstChild("GiveWins")
-                and workspace.Map.GiveWins:FindFirstChild("OneWin")
-                and workspace.Map.GiveWins.OneWin:FindFirstChild("Button15")
-        end)
-    end
-end)
-
--- Variables Globales
-_G.FlySpeed = 40
-_G.AutoFlyActive = false
-
--- SLIDER
-MainTab:Slider({
-    Title = "Flight Speed",
-    Desc = "Adjusts the power of the scroll",
-    Flag = "flySpeedSlider",
-    Value = { Min = 1, Max = 1000000, Default = 40 },
-    Callback = function(value)
-        _G.FlySpeed = value
-    end
+-- */ Elements Section /* --
+local ElementsSection = Window:Section({
+    Title = "Elements",
 })
 
--- TOGGLE FORZADO
-MainTab:Toggle({
-    Title = "farm wins",
-    Desc = "Forced Farm (No se detiene)",
-    Callback = function(state)
-        _G.AutoFlyActive = state
-        if state then
+-- */ Main Tab /* --
+do
+    local MainTab = ElementsSection:Tab({
+        Title = "Main",
+        Icon = "solar:home-2-bold",
+        IconColor = Color3.fromHex("#83889E"),
+        IconShape = "Square",
+        Border = true,
+    })
+
+    -- Inicializar controlador
+    local flyController = FlyController.new(LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
+
+    LocalPlayer.CharacterAdded:Connect(function(newChar)
+        if flyController then flyController:Stop() end
+        flyController = FlyController.new(newChar)
+        if _G.AutoFlyActive then
+            task.wait(0.5)
             flyController:StartForcedFly(function()
                 return workspace:FindFirstChild("Map")
                     and workspace.Map:FindFirstChild("GiveWins")
                     and workspace.Map.GiveWins:FindFirstChild("OneWin")
                     and workspace.Map.GiveWins.OneWin:FindFirstChild("Button15")
             end)
-            WindUI:Notify({Title = "Auto Farm", Content = "Modo Forzado Activado", Duration = 2})
-        else
-            flyController:Stop()
-            WindUI:Notify({Title = "Auto Farm", Content = "Detenido", Duration = 2})
         end
-    end,
-})
+    end)
+
+    -- Variables Globales
+    _G.FlySpeed = 40
+    _G.AutoFlyActive = false
+
+    local MainSection = MainTab:Section({
+        Title = "Farm Controls",
+    })
+
+    MainSection:Slider({
+        Title = "Flight Speed",
+        Desc = "Adjusts the power of the scroll",
+        Flag = "flySpeedSlider",
+        Value = { Min = 1, Max = 1000000, Default = 40 },
+        Callback = function(value)
+            _G.FlySpeed = value
+        end
+    })
+
+    MainSection:Toggle({
+        Title = "farm wins",
+        Desc = "Forced Farm (No se detiene)",
+        Callback = function(state)
+            _G.AutoFlyActive = state
+            if state then
+                flyController:StartForcedFly(function()
+                    return workspace:FindFirstChild("Map")
+                        and workspace.Map:FindFirstChild("GiveWins")
+                        and workspace.Map.GiveWins:FindFirstChild("OneWin")
+                        and workspace.Map.GiveWins.OneWin:FindFirstChild("Button15")
+                end)
+                WindUI:Notify({Title = "Auto Farm", Content = "Modo Forzado Activado", Duration = 2})
+            else
+                flyController:Stop()
+                WindUI:Notify({Title = "Auto Farm", Content = "Detenido", Duration = 2})
+            end
+        end,
+    })
+end
+
+-- */ About Tab /* --
+do
+    local AboutTab = Window:Tab({
+        Title = "About",
+        Icon = "solar:info-square-bold",
+        IconColor = Color3.fromHex("#83889E"),
+        IconShape = "Square",
+        Border = true,
+    })
+
+    local AboutSection = AboutTab:Section({
+        Title = "EdwinDev Hub",
+    })
+
+    AboutSection:Section({
+        Title = "1+ tongue escape",
+        TextSize = 24,
+        FontWeight = Enum.FontWeight.SemiBold,
+    })
+
+    AboutSection:Space()
+
+    AboutSection:Section({
+        Title = "Custom Script Hub developed by EdwinDev.\nOptimized for forced flight and automated farming.",
+        TextSize = 18,
+        TextTransparency = 0.35,
+        FontWeight = Enum.FontWeight.Medium,
+    })
+
+    AboutTab:Button({
+        Title = "Destroy Window",
+        Color = Color3.fromHex("#ff4830"),
+        Justify = "Center",
+        Icon = "shredder",
+        IconAlign = "Left",
+        Callback = function()
+            Window:Destroy()
+        end,
+    })
+end
 
 WindUI:Notify({
     Title = "by EdwinDev",
-    Content = "Fly Forzado Cargado (Resistente a interrupciones).",
+    Content = "Interface Adapted to WindUI v2 Format.",
     Duration = 5
 })
