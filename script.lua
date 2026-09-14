@@ -179,7 +179,7 @@ local Window = WindUI:CreateWindow({
     Icon = "plane",
     Author = "By EdwinDev",
     Folder = "FlyConfigV4",
-    Theme = "Dark",
+    Theme = "Blue",
     Size = UDim2.fromOffset(450, 350),
 })
 
