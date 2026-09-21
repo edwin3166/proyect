@@ -210,10 +210,11 @@ local Window = WindUI:CreateWindow({
     Author = "by EdwinDev",
     Folder = "EdwinDevHub",
     Theme = "Dark",
-    Size = UDim2.fromOffset(360, 280),
-    MinSize = Vector2.new(360, 280),
-    MaxSize = Vector2.new(360, 280),
+    Size = UDim2.fromOffset(320, 240),
+    MinSize = Vector2.new(320, 240),
+    MaxSize = Vector2.new(320, 240),
     Resizable = false,
+    AutoScale = false,
     NewElements = true,
 
     OpenButton = {
@@ -231,6 +232,13 @@ local Window = WindUI:CreateWindow({
         ButtonsType = "Mac",
     },
 })
+
+-- Forzar el tamaño visual después de la creación para evitar valores guardados por WindUI.
+local CompactWindowSize = UDim2.fromOffset(320, 240)
+Window.Size = CompactWindowSize
+if Window.UIElements and Window.UIElements.Main then
+    Window.UIElements.Main.Size = CompactWindowSize
+end
 
 local MainTab = Window:Tab({
     Title = "Main",
