@@ -64,27 +64,38 @@ setreadonly(mt, true)
 
 print("✅ Anti-Kick completo cargado")
 
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
 
---[[ WindUI Example Adapted for EdwinDev ]]
-local cloneref = (cloneref or clonereference or function(instance) return instance end)
-local ReplicatedStorage = cloneref(game:GetService("ReplicatedStorage"))
-local HttpService = cloneref(game:GetService("HttpService"))
+-- Cargar WindUI (versión nueva, código fuente)
+local WINDUI_URL = "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
+local success, WindUI = pcall(function()
+    return loadstring(game:HttpGet(WINDUI_URL))()
+end)
 
-local WindUI
-do
-    local ok, result = pcall(function() return require("./src/Init") end)
-    if ok then
-        WindUI = result
-    else
-        WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
-    end
+if not success or not WindUI then
+    warn("Error: No se pudo cargar WindUI.")
+    return
 end
 
 --// FlyController Reforzado (EdwinDev Style + Forced Logic)
+local SessionStats = {
+    ActiveSeconds = 0,
+    LastCheck = os.clock(),
+    DistanceFlown = 0,
+    StartWins = 0,
+    WinsStat = nil,
+    ReachedCount = 0,
+}
+
+task.spawn(function()
+    local leaderstats = LocalPlayer:WaitForChild("leaderstats", 10)
+    local winsStat = leaderstats and leaderstats:FindFirstChild("Wins")
+    if winsStat then
+        SessionStats.WinsStat = winsStat
+        SessionStats.StartWins = winsStat.Value
+    end
+end)
+
 local FlyController = {}
 FlyController.__index = FlyController
 
@@ -96,25 +107,36 @@ function FlyController.new(character)
     self.active = false
     self.connection = nil
     self.originalCollisions = {}
+    self.collisionParts = {}
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            self.collisionParts[#self.collisionParts + 1] = part
+        end
+    end
+    self.collisionsDisabled = false
+    self.hasReachedTarget = false
     return self
 end
 
 function FlyController:_setCollisions(enabled)
+    if enabled == (not self.collisionsDisabled) then return end
+
     if enabled then
         for part, canCollide in pairs(self.originalCollisions) do
             if part and part.Parent then part.CanCollide = canCollide end
         end
-        self.originalCollisions = {}
-    else
-        for _, part in ipairs(self.character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                if self.originalCollisions[part] == nil then
-                    self.originalCollisions[part] = part.CanCollide
-                end
-                part.CanCollide = false
-            end
+        table.clear(self.originalCollisions)
+        self.collisionsDisabled = false
+        return
+    end
+
+    for _, part in ipairs(self.collisionParts) do
+        if part.Parent then
+            self.originalCollisions[part] = part.CanCollide
+            part.CanCollide = false
         end
     end
+    self.collisionsDisabled = true
 end
 
 function FlyController:Stop()
@@ -132,9 +154,9 @@ end
 function FlyController:StartForcedFly(getTargetFunc)
     self:Stop()
     self.active = true
-    
+
     local lastValidCFrame = self.humanoidRootPart.CFrame
-    
+
     self.connection = RunService.Heartbeat:Connect(function(dt)
         if not self.active or not self.humanoidRootPart or not self.humanoidRootPart.Parent or self.humanoid.Health <= 0 then
             self:Stop()
@@ -144,186 +166,401 @@ function FlyController:StartForcedFly(getTargetFunc)
         local target = getTargetFunc()
         if not target then return end
 
-        local targetPos = target:IsA("Model") and target:GetPivot().Position or target.Position
-        local goalPosition = targetPos + Vector3.new(0, 0, 0)
-        
+        local goalPosition = target:IsA("Model") and target:GetPivot().Position or target.Position
+
         local currentPos = self.humanoidRootPart.Position
         local toGoal = goalPosition - currentPos
         local distance = toGoal.Magnitude
 
         -- Forzar el estado de vuelo
-        self.humanoid.PlatformStand = true
+        if not self.humanoid.PlatformStand then
+            self.humanoid.PlatformStand = true
+        end
         self:_setCollisions(false)
 
         if distance > 0.5 then
             local direction = toGoal.Unit
             local speed = _G.FlySpeed or 40
             local step = speed * dt
-            
+
             local newPos = (step >= distance) and goalPosition or (currentPos + direction * step)
+
             local desiredCFrame = CFrame.new(newPos, newPos + direction)
             local smoothCFrame = lastValidCFrame:Lerp(desiredCFrame, math.clamp(dt * 10, 0, 1))
-            
+
             self.humanoidRootPart.CFrame = smoothCFrame
             lastValidCFrame = smoothCFrame
+            SessionStats.DistanceFlown = SessionStats.DistanceFlown + (smoothCFrame.Position - currentPos).Magnitude
+            self.hasReachedTarget = false
         else
             self.humanoidRootPart.CFrame = CFrame.new(goalPosition, goalPosition + self.humanoidRootPart.CFrame.LookVector)
             lastValidCFrame = self.humanoidRootPart.CFrame
+            if not self.hasReachedTarget then
+                self.hasReachedTarget = true
+                SessionStats.ReachedCount = SessionStats.ReachedCount + 1
+            end
         end
     end)
 end
 
--- */ Window /* --
+--// Configuración de la Interfaz (WindUI nuevo)
 local Window = WindUI:CreateWindow({
-    Title = "1+ tongue escape",
-    Author = "by EdwinDev",
-    Folder = "EdwinDevHub",
-    Icon = "solar:folder-2-bold-duotone",
+    Title = "Admin Panel",
+    Icon = "solar:plain-2-bold",
+    Author = "By EdwinDev",
+    Folder = "FlyConfigV4",
+    Theme = "Dark",
+    Size = UDim2.fromOffset(450, 350),
     NewElements = true,
-    HideSearchBar = false,
+
     OpenButton = {
-        Title = "Open EdwinDev UI",
+        Title = "Abrir Panel",
         CornerRadius = UDim.new(1, 0),
         StrokeThickness = 3,
         Enabled = true,
         Draggable = true,
         OnlyMobile = false,
         Scale = 0.5,
-        Color = ColorSequence.new(
-            Color3.fromHex("#30FF6A"),
-            Color3.fromHex("#e7ff2f")
-        ),
     },
+
     Topbar = {
         Height = 44,
         ButtonsType = "Mac",
     },
 })
 
--- */ Tags /* --
-do
-    Window:Tag({
-        Title = "v" .. WindUI.Version,
-        Icon = "github",
-        Color = Color3.fromHex("#1c1c1c"),
-        Border = true,
-    })
-end
+local MainTab = Window:Tab({ Title = "Main", Icon = "mouse-pointer-2", Opened = true })
 
--- */ Elements Section /* --
-local ElementsSection = Window:Section({
-    Title = "Elements",
+-- Inicializar controlador
+local flyController = FlyController.new(LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
+
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    if flyController then flyController:Stop() end
+    flyController = FlyController.new(newChar)
+    if _G.AutoFlyActive then
+        task.wait(0.5)
+        flyController:StartForcedFly(function()
+            return workspace:FindFirstChild("Map")
+                and workspace.Map:FindFirstChild("GiveWins")
+                and workspace.Map.GiveWins:FindFirstChild("OneWin")
+                and workspace.Map.GiveWins.OneWin:FindFirstChild("Button15")
+        end)
+    end
+end)
+
+-- Variables Globales
+_G.FlySpeed = 40
+_G.AutoFlyActive = false
+
+-- SLIDER
+MainTab:Slider({
+    Title = "Flight Speed",
+    Desc = "Adjusts the power of the scroll",
+    Flag = "flySpeedSlider",
+    Value = { Min = 1, Max = 1000000, Default = 40 },
+    Callback = function(value)
+        _G.FlySpeed = value
+    end,
 })
 
--- */ Main Tab /* --
-do
-    local MainTab = ElementsSection:Tab({
-        Title = "Main",
-        Icon = "solar:home-2-bold",
-        IconColor = Color3.fromHex("#83889E"),
-        IconShape = "Square",
-        Border = true,
-    })
-
-    -- Inicializar controlador
-    local flyController = FlyController.new(LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
-
-    LocalPlayer.CharacterAdded:Connect(function(newChar)
-        if flyController then flyController:Stop() end
-        flyController = FlyController.new(newChar)
-        if _G.AutoFlyActive then
-            task.wait(0.5)
+-- TOGGLE FORZADO
+MainTab:Toggle({
+    Title = "Fly dev",
+    Desc = "Dev",
+    Callback = function(state)
+        _G.AutoFlyActive = state
+        if state then
             flyController:StartForcedFly(function()
                 return workspace:FindFirstChild("Map")
                     and workspace.Map:FindFirstChild("GiveWins")
                     and workspace.Map.GiveWins:FindFirstChild("OneWin")
                     and workspace.Map.GiveWins.OneWin:FindFirstChild("Button15")
             end)
+            WindUI:Notify({ Title = "Auto Farm", Content = "Modo Forzado Activado", Duration = 2 })
+        else
+            flyController:Stop()
+            WindUI:Notify({ Title = "Auto Farm", Content = "Detenido", Duration = 2 })
         end
+    end,
+})
+
+--// MISC TAB — Perfil + Contador de ejecuciones activas
+local MiscTab = Window:Tab({ Title = "Misc", Icon = "users" })
+
+-- Perfil del usuario actual (nombre + avatar)
+do
+    local thumbOk, thumbContent = pcall(function()
+        local content = Players:GetUserThumbnailAsync(
+            LocalPlayer.UserId,
+            Enum.ThumbnailType.HeadShot,
+            Enum.ThumbnailSize.Size100x100
+        )
+        return content
     end)
 
-    -- Variables Globales
-    _G.FlySpeed = 40
-    _G.AutoFlyActive = false
+    local profileParams = {
+        Title = LocalPlayer.DisplayName .. " (@" .. LocalPlayer.Name .. ")",
+        Desc = "UserId: " .. tostring(LocalPlayer.UserId),
+    }
+    if thumbOk and thumbContent then
+        profileParams.Image = thumbContent
+    end
 
-    local MainSection = MainTab:Section({
-        Title = "Farm Controls",
-    })
+    local createdOk = pcall(function()
+        MiscTab:Paragraph(profileParams)
+    end)
+    if not createdOk then
+        -- Fallback por si esta build no acepta el campo Image en Paragraph
+        MiscTab:Paragraph({
+            Title = profileParams.Title,
+            Desc = profileParams.Desc,
+        })
+    end
+end
 
-    MainSection:Slider({
-        Title = "Flight Speed",
-        Desc = "Adjusts the power of the scroll",
-        Flag = "flySpeedSlider",
-        Value = { Min = 1, Max = 1000000, Default = 40 },
-        Callback = function(value)
-            _G.FlySpeed = value
+local COUNTAPI_NAMESPACE = "givewins-fly-v4"
+local COUNTAPI_KEY = "active-users"
+
+-- Estadísticas de la sesión
+local statsLabel = MiscTab:Paragraph({
+    Title = "Estadísticas",
+    Desc = "Cargando...",
+})
+
+local function formatDuration(seconds)
+    local totalSeconds = math.floor(seconds)
+    local hours = math.floor(totalSeconds / 3600)
+    local minutes = math.floor((totalSeconds % 3600) / 60)
+    local secs = totalSeconds % 60
+    return string.format("%02d:%02d:%02d", hours, minutes, secs)
+end
+
+local function refreshStats()
+    local flyState = _G.AutoFlyActive and "Activo" or "Inactivo"
+
+    local winsLine
+    local currentWinsLine
+    if SessionStats.WinsStat then
+        local gained = SessionStats.WinsStat.Value - SessionStats.StartWins
+        winsLine = "Wins ganadas desde que ejecuté: " .. tostring(math.max(gained, 0))
+        currentWinsLine = "Wins actuales: " .. tostring(SessionStats.WinsStat.Value)
+    else
+        winsLine = "Wins ganadas (aprox., veces llegado al botón): " .. tostring(SessionStats.ReachedCount)
+        currentWinsLine = "Wins actuales: no disponible"
+    end
+
+    local lines = {
+        "Tiempo de fly activo: " .. formatDuration(SessionStats.ActiveSeconds),
+        "Estado del Fly: " .. flyState,
+        "Velocidad actual: " .. tostring(_G.FlySpeed or 40),
+        "Distancia recorrida: " .. string.format("%.0f studs", SessionStats.DistanceFlown),
+        currentWinsLine,
+        winsLine,
+        "Antigüedad de cuenta: " .. tostring(LocalPlayer.AccountAge) .. " días",
+    }
+    statsLabel:SetDesc(table.concat(lines, "\n"))
+end
+
+task.spawn(function()
+    while true do
+        local now = os.clock()
+        local delta = now - SessionStats.LastCheck
+        SessionStats.LastCheck = now
+        if _G.AutoFlyActive then
+            SessionStats.ActiveSeconds = SessionStats.ActiveSeconds + delta
         end
-    })
+        refreshStats()
+        task.wait(1)
+    end
+end)
 
-    MainSection:Toggle({
-        Title = "farm wins",
-        Desc = "Forced Farm (No se detiene)",
-        Callback = function(state)
-            _G.AutoFlyActive = state
-            if state then
-                flyController:StartForcedFly(function()
-                    return workspace:FindFirstChild("Map")
-                        and workspace.Map:FindFirstChild("GiveWins")
-                        and workspace.Map.GiveWins:FindFirstChild("OneWin")
-                        and workspace.Map.GiveWins.OneWin:FindFirstChild("Button15")
-                end)
-                WindUI:Notify({Title = "Auto Farm", Content = "Modo Forzado Activado", Duration = 2})
-            else
-                flyController:Stop()
-                WindUI:Notify({Title = "Auto Farm", Content = "Detenido", Duration = 2})
-            end
-        end,
-    })
+local activeCountLabel = MiscTab:Paragraph({
+    Title = "Usuarios ejecutando ahora",
+    Desc = "Cargando...",
+})
+
+local HttpService = game:GetService("HttpService")
+local hasIncremented = false
+
+local function safeHttpGet(url)
+    local ok, result = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if not ok then return nil end
+
+    local decodeOk, decoded = pcall(function()
+        return HttpService:JSONDecode(result)
+    end)
+    if decodeOk then return decoded end
+    return nil
 end
 
--- */ About Tab /* --
-do
-    local AboutTab = Window:Tab({
-        Title = "About",
-        Icon = "solar:info-square-bold",
-        IconColor = Color3.fromHex("#83889E"),
-        IconShape = "Square",
-        Border = true,
-    })
-
-    local AboutSection = AboutTab:Section({
-        Title = "EdwinDev Hub",
-    })
-
-    AboutSection:Section({
-        Title = "1+ tongue escape",
-        TextSize = 24,
-        FontWeight = Enum.FontWeight.SemiBold,
-    })
-
-    AboutSection:Space()
-
-    AboutSection:Section({
-        Title = "Custom Script Hub developed by EdwinDev.\nOptimized for forced flight and automated farming.",
-        TextSize = 18,
-        TextTransparency = 0.35,
-        FontWeight = Enum.FontWeight.Medium,
-    })
-
-    AboutTab:Button({
-        Title = "Destroy Window",
-        Color = Color3.fromHex("#ff4830"),
-        Justify = "Center",
-        Icon = "shredder",
-        IconAlign = "Left",
-        Callback = function()
-            Window:Destroy()
-        end,
-    })
+local function incrementActiveCount()
+    local data = safeHttpGet(("https://api.countapi.xyz/hit/%s/%s"):format(COUNTAPI_NAMESPACE, COUNTAPI_KEY))
+    if data and data.value then
+        hasIncremented = true
+        return data.value
+    end
+    return nil
 end
+
+local function decrementActiveCount()
+    if not hasIncremented then return end
+    safeHttpGet(("https://api.countapi.xyz/hit/%s/%s?amount=-1"):format(COUNTAPI_NAMESPACE, COUNTAPI_KEY))
+    hasIncremented = false
+end
+
+local function getActiveCount()
+    local data = safeHttpGet(("https://api.countapi.xyz/get/%s/%s"):format(COUNTAPI_NAMESPACE, COUNTAPI_KEY))
+    if data and data.value then
+        return data.value
+    end
+    return nil
+end
+
+local function refreshLabel()
+    local count = getActiveCount()
+    if count then
+        activeCountLabel:SetDesc(("%d personas ejecutando el script ahora"):format(math.max(count, 0)))
+    else
+        activeCountLabel:SetDesc("No se pudo obtener el dato")
+    end
+end
+
+task.spawn(function()
+    incrementActiveCount()
+    refreshLabel()
+    while true do
+        task.wait(10)
+        refreshLabel()
+    end
+end)
+
+-- Colores disponibles para acento e iconos
+local colorPalette = {
+    { Name = "Amarillo", Color = Color3.fromHex("#E3B341") },
+    { Name = "Azul",     Color = Color3.fromHex("#5B8DEF") },
+    { Name = "Rojo",     Color = Color3.fromHex("#E5484D") },
+    { Name = "Verde",    Color = Color3.fromHex("#30A46C") },
+    { Name = "Morado",   Color = Color3.fromHex("#8B5CF6") },
+    { Name = "Naranja",  Color = Color3.fromHex("#F5A524") },
+    { Name = "Rosa",     Color = Color3.fromHex("#D6409F") },
+    { Name = "Cian",     Color = Color3.fromHex("#23A9C4") },
+}
+
+-- Colores disponibles para el fondo del panel
+local backgroundPalette = {
+    { Name = "Negro",         Color = Color3.fromHex("#0D0D0F") },
+    { Name = "Gris Oscuro",   Color = Color3.fromHex("#151518") },
+    { Name = "Azul Oscuro",   Color = Color3.fromHex("#0B1220") },
+    { Name = "Verde Oscuro",  Color = Color3.fromHex("#0B1710") },
+    { Name = "Morado Oscuro", Color = Color3.fromHex("#140B1F") },
+    { Name = "Rojo Oscuro",   Color = Color3.fromHex("#1F0B0E") },
+}
+
+local function findColor(list, name)
+    for _, entry in ipairs(list) do
+        if entry.Name == name then return entry.Color end
+    end
+    return list[1].Color
+end
+
+local currentAccentName = "Azul"
+local currentIconName = "Azul"
+local currentBackgroundName = "Negro"
+
+local function applyDynamicTheme()
+    local accent = findColor(colorPalette, currentAccentName)
+    local iconColor = findColor(colorPalette, currentIconName)
+    local bg = findColor(backgroundPalette, currentBackgroundName)
+
+    local themeTable = {
+        Name = "Personalizado",
+        Accent = accent,
+        Dialog = Color3.fromHex("#18181b"),
+        Outline = accent,
+        Text = Color3.fromHex("#EDEDEF"),
+        Placeholder = Color3.fromHex("#71717A"),
+        Background = bg,
+        Button = Color3.fromHex("#232326"),
+        Icon = iconColor,
+    }
+
+    local addOk = pcall(function()
+        WindUI:AddTheme(themeTable)
+    end)
+    if addOk then
+        pcall(function()
+            WindUI:SetTheme("Personalizado")
+        end)
+    else
+        WindUI:Notify({
+            Title = "Tema",
+            Content = "No se pudo aplicar el tema personalizado en esta build.",
+            Duration = 3,
+        })
+    end
+end
+
+local accentNames, iconNames, bgNames = {}, {}, {}
+for _, entry in ipairs(colorPalette) do
+    table.insert(accentNames, entry.Name)
+    table.insert(iconNames, entry.Name)
+end
+for _, entry in ipairs(backgroundPalette) do
+    table.insert(bgNames, entry.Name)
+end
+
+MiscTab:Dropdown({
+    Title = "Color de acento",
+    Desc = "Color principal de botones, sliders y bordes",
+    Values = accentNames,
+    Default = currentAccentName,
+    Callback = function(name)
+        currentAccentName = name
+        applyDynamicTheme()
+    end,
+})
+
+MiscTab:Dropdown({
+    Title = "Color de iconos",
+    Desc = "Color de los íconos de la interfaz",
+    Values = iconNames,
+    Default = currentIconName,
+    Callback = function(name)
+        currentIconName = name
+        applyDynamicTheme()
+    end,
+})
+
+MiscTab:Dropdown({
+    Title = "Color de fondo",
+    Desc = "Color de fondo del panel",
+    Values = bgNames,
+    Default = currentBackgroundName,
+    Callback = function(name)
+        currentBackgroundName = name
+        applyDynamicTheme()
+    end,
+})
+
+applyDynamicTheme()
+
+-- Best effort: descontar al salir del juego o al cerrarse el cliente
+Players.PlayerRemoving:Connect(function(plr)
+    if plr == LocalPlayer then
+        decrementActiveCount()
+    end
+end)
+
+pcall(function()
+    game:BindToClose(function()
+        decrementActiveCount()
+    end)
+end)
 
 WindUI:Notify({
     Title = "by EdwinDev",
-    Content = "Interface Adapted to WindUI v2 Format.",
-    Duration = 5
+    Content = "Fly Forzado Cargado (Resistente a interrupciones).",
+    Duration = 5,
 })
