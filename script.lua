@@ -210,7 +210,7 @@ local Window = WindUI:CreateWindow({
     Author = "by EdwinDev",
     Folder = "EdwinDevHub",
     Theme = "Dark",
-    Size = UDim2.fromOffset(450, 350),
+    Size = UDim2.fromOffset(360, 280),
     NewElements = true,
 
     OpenButton = {
