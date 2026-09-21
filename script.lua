@@ -229,16 +229,11 @@ local Window = WindUI:CreateWindow({
     },
 })
 
-local ElementsSection = Window:Section({ Title = "Elements" })
-local MainTab = ElementsSection:Tab({
+local MainTab = Window:Tab({
     Title = "Main",
-    Icon = "solar:home-2-bold",
-    IconColor = Color3.fromHex("#83889E"),
-    IconShape = "Square",
-    Border = true,
+    Icon = "mouse-pointer-2",
     Opened = true,
 })
-local MainSection = MainTab:Section({ Title = "Farm Controls" })
 
 -- Versión visible junto al icono de GitHub
 Window:Tag({
@@ -270,7 +265,7 @@ _G.FlySpeed = 40
 _G.AutoFlyActive = false
 
 -- SLIDER
-MainSection:Slider({
+MainTab:Slider({
     Title = "Flight Speed",
     Desc = "Adjusts the power of the scroll",
     Flag = "flySpeedSlider",
@@ -281,7 +276,7 @@ MainSection:Slider({
 })
 
 -- TOGGLE FORZADO
-MainSection:Toggle({
+MainTab:Toggle({
     Title = "farm wins",
     Desc = "Forced Farm (No se detiene)",
     Callback = function(state)
