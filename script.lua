@@ -236,8 +236,17 @@ local MainTab = ElementsSection:Tab({
     IconColor = Color3.fromHex("#83889E"),
     IconShape = "Square",
     Border = true,
+    Opened = true,
 })
 local MainSection = MainTab:Section({ Title = "Farm Controls" })
+
+-- Versión visible junto al icono de GitHub
+Window:Tag({
+    Title = "v1.1.6",
+    Icon = "github",
+    Color = Color3.fromHex("#1c1c1c"),
+    Border = true,
+})
 
 -- Inicializar controlador
 local flyController = FlyController.new(LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
