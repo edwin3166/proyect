@@ -211,6 +211,9 @@ local Window = WindUI:CreateWindow({
     Folder = "EdwinDevHub",
     Theme = "Dark",
     Size = UDim2.fromOffset(360, 280),
+    MinSize = Vector2.new(360, 280),
+    MaxSize = Vector2.new(360, 280),
+    Resizable = false,
     NewElements = true,
 
     OpenButton = {
