@@ -205,16 +205,16 @@ end
 
 --// Configuración de la Interfaz (WindUI nuevo)
 local Window = WindUI:CreateWindow({
-    Title = "Admin Panel",
-    Icon = "solar:plain-2-bold",
-    Author = "By EdwinDev",
-    Folder = "FlyConfigV4",
+    Title = "1+ tongue escape",
+    Icon = "solar:folder-2-bold-duotone",
+    Author = "by EdwinDev",
+    Folder = "EdwinDevHub",
     Theme = "Dark",
     Size = UDim2.fromOffset(450, 350),
     NewElements = true,
 
     OpenButton = {
-        Title = "Abrir Panel",
+        Title = "Open EdwinDev UI",
         CornerRadius = UDim.new(1, 0),
         StrokeThickness = 3,
         Enabled = true,
@@ -229,7 +229,15 @@ local Window = WindUI:CreateWindow({
     },
 })
 
-local MainTab = Window:Tab({ Title = "Main", Icon = "mouse-pointer-2", Opened = true })
+local ElementsSection = Window:Section({ Title = "Elements" })
+local MainTab = ElementsSection:Tab({
+    Title = "Main",
+    Icon = "solar:home-2-bold",
+    IconColor = Color3.fromHex("#83889E"),
+    IconShape = "Square",
+    Border = true,
+})
+local MainSection = MainTab:Section({ Title = "Farm Controls" })
 
 -- Inicializar controlador
 local flyController = FlyController.new(LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
@@ -253,7 +261,7 @@ _G.FlySpeed = 40
 _G.AutoFlyActive = false
 
 -- SLIDER
-MainTab:Slider({
+MainSection:Slider({
     Title = "Flight Speed",
     Desc = "Adjusts the power of the scroll",
     Flag = "flySpeedSlider",
@@ -264,9 +272,9 @@ MainTab:Slider({
 })
 
 -- TOGGLE FORZADO
-MainTab:Toggle({
-    Title = "Fly dev",
-    Desc = "Dev",
+MainSection:Toggle({
+    Title = "farm wins",
+    Desc = "Forced Farm (No se detiene)",
     Callback = function(state)
         _G.AutoFlyActive = state
         if state then
@@ -545,6 +553,47 @@ MiscTab:Dropdown({
 })
 
 applyDynamicTheme()
+
+-- */ About Tab /* --
+do
+    local AboutTab = Window:Tab({
+        Title = "About",
+        Icon = "solar:info-square-bold",
+        IconColor = Color3.fromHex("#83889E"),
+        IconShape = "Square",
+        Border = true,
+    })
+
+    local AboutSection = AboutTab:Section({
+        Title = "EdwinDev Hub",
+    })
+
+    AboutSection:Section({
+        Title = "1+ tongue escape",
+        TextSize = 24,
+        FontWeight = Enum.FontWeight.SemiBold,
+    })
+
+    AboutSection:Space()
+
+    AboutSection:Section({
+        Title = "Custom Script Hub developed by EdwinDev.\nOptimized for forced flight and automated farming.",
+        TextSize = 18,
+        TextTransparency = 0.35,
+        FontWeight = Enum.FontWeight.Medium,
+    })
+
+    AboutTab:Button({
+        Title = "Destroy Window",
+        Color = Color3.fromHex("#ff4830"),
+        Justify = "Center",
+        Icon = "shredder",
+        IconAlign = "Left",
+        Callback = function()
+            Window:Destroy()
+        end,
+    })
+end
 
 -- Best effort: descontar al salir del juego o al cerrarse el cliente
 Players.PlayerRemoving:Connect(function(plr)
