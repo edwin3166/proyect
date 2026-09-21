@@ -558,47 +558,6 @@ MiscTab:Dropdown({
 
 applyDynamicTheme()
 
--- */ About Tab /* --
-do
-    local AboutTab = Window:Tab({
-        Title = "About",
-        Icon = "solar:info-square-bold",
-        IconColor = Color3.fromHex("#83889E"),
-        IconShape = "Square",
-        Border = true,
-    })
-
-    local AboutSection = AboutTab:Section({
-        Title = "EdwinDev Hub",
-    })
-
-    AboutSection:Section({
-        Title = "1+ tongue escape",
-        TextSize = 24,
-        FontWeight = Enum.FontWeight.SemiBold,
-    })
-
-    AboutSection:Space()
-
-    AboutSection:Section({
-        Title = "Custom Script Hub developed by EdwinDev.\nOptimized for forced flight and automated farming.",
-        TextSize = 18,
-        TextTransparency = 0.35,
-        FontWeight = Enum.FontWeight.Medium,
-    })
-
-    AboutTab:Button({
-        Title = "Destroy Window",
-        Color = Color3.fromHex("#ff4830"),
-        Justify = "Center",
-        Icon = "shredder",
-        IconAlign = "Left",
-        Callback = function()
-            Window:Destroy()
-        end,
-    })
-end
-
 -- Best effort: descontar al salir del juego o al cerrarse el cliente
 Players.PlayerRemoving:Connect(function(plr)
     if plr == LocalPlayer then
